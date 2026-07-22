@@ -1,0 +1,49 @@
+<p><strong>🔐 Key Vault Secret Expiry Alert</strong></p>
+
+<p>
+  Vault scan found <strong>{{ALERT_COUNT}}</strong> secret(s) expiring within
+  <strong>{{WARNING_DAYS}}</strong> days (or already expired).
+</p>
+
+<p>
+  <em>
+    Thresholds:
+    WARNING &lt;= {{WARNING_DAYS}}d |
+    URGENT &lt;= {{URGENT_DAYS}}d |
+    CRITICAL &lt;= {{CRITICAL_DAYS}}d |
+    EXPIRED &lt;= 0
+  </em>
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Severity</th>
+      <th>Secret name</th>
+      <th>Days remaining</th>
+      <th>Expires (UTC)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Example row — Power Automate Compose/Post will render AlertItems instead -->
+    <tr>
+      <td>{{SEVERITY}}</td>
+      <td>{{SECRET_NAME}}</td>
+      <td>{{DAYS_REMAINING}}</td>
+      <td>{{VALIDITY_END_TIME}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  <strong>Action:</strong> rotate/renew the listed secrets and update Databricks / SQL warehouse
+  configs if needed.
+</p>
+
+<p>
+  <em>Security:</em> never paste secret <strong>values</strong> into Teams. This alert lists names and expiry only.
+</p>
+
+<p>
+  Runbook: {{RUNBOOK_URL}}
+</p>

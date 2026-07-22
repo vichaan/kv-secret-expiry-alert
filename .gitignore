@@ -1,0 +1,17 @@
+# Build output
+dist/
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+*.user
+
+# Local secrets / env (keep empty — never commit vault secrets)
+.env
+.env.*
+*.pem
+*.pfx

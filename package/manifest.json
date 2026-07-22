@@ -1,0 +1,63 @@
+{
+  "schema": "1.0",
+  "details": {
+    "displayName": "KV-Secret-Expiry-Alert",
+    "description": "Daily Azure Key Vault secret expiry scanner. Posts a Teams alert when secrets are within 30/14/7 days of expiry or already expired. Uses List secrets (validityEndTime) only — never reads secret values.",
+    "createdTime": "2026-07-22T17:00:00.0000000Z",
+    "packageTelemetryId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "creator": {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "type": "User",
+      "tenantId": "00000000-0000-0000-0000-000000000000"
+    },
+    "sourceEnvironment": ""
+  },
+  "resources": {
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890": {
+      "type": "Microsoft.Flow/flows",
+      "suggestedCreationType": "New",
+      "details": {
+        "displayName": "KV-Secret-Expiry-Alert"
+      },
+      "configurableBy": "User",
+      "hierarchy": {
+        "azureKeyVaultConnections": [
+          "shared_keyvault"
+        ],
+        "teamsConnections": [
+          "shared_teams"
+        ]
+      },
+      "dependsOn": [
+        "shared_keyvault",
+        "shared_teams"
+      ]
+    },
+    "shared_keyvault": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_keyvault",
+      "name": "shared_keyvault",
+      "type": "Microsoft.PowerApps/apis",
+      "suggestedCreationType": "Existing",
+      "details": {
+        "displayName": "Azure Key Vault",
+        "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1678/1.0.1678.3700/keyvault/icon.png"
+      },
+      "configurableBy": "User",
+      "hierarchy": null,
+      "dependsOn": []
+    },
+    "shared_teams": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+      "name": "shared_teams",
+      "type": "Microsoft.PowerApps/apis",
+      "suggestedCreationType": "Existing",
+      "details": {
+        "displayName": "Microsoft Teams",
+        "iconUri": "https://connectoricons-prod.azureedge.net/releases/v1.0.1678/1.0.1678.3700/teams/icon.png"
+      },
+      "configurableBy": "User",
+      "hierarchy": null,
+      "dependsOn": []
+    }
+  }
+}

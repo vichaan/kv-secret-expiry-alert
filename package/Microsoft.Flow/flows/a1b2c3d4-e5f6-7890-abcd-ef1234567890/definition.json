@@ -1,0 +1,273 @@
+{
+  "name": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "id": "/providers/Microsoft.Flow/flows/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "KV-Secret-Expiry-Alert",
+    "description": "Daily scan of Azure Key Vault secrets. Alerts Microsoft Teams when validityEndTime is within 30/14/7 days or already expired. Does not read secret values.",
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "10.0.0.1",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Recurrence": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "9"
+              ],
+              "minutes": [
+                0
+              ]
+            },
+            "timeZone": "SE Asia Standard Time"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Initialize_AlertItems": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "AlertItems",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Initialize_WarningDays": {
+          "runAfter": {
+            "Initialize_AlertItems": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "WarningDays",
+                "type": "integer",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "Initialize_UrgentDays": {
+          "runAfter": {
+            "Initialize_WarningDays": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "UrgentDays",
+                "type": "integer",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "Initialize_CriticalDays": {
+          "runAfter": {
+            "Initialize_UrgentDays": [
+              "Succeeded"
+            ]
+          },
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "CriticalDays",
+                "type": "integer",
+                "value": 7
+              }
+            ]
+          }
+        },
+        "List_secrets": {
+          "runAfter": {
+            "Initialize_CriticalDays": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_keyvault",
+              "connectionName": "shared_keyvault",
+              "operationId": "ListSecrets"
+            },
+            "parameters": {
+              "subscriptionKey": ""
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Apply_to_each": {
+          "foreach": "@outputs('List_secrets')?['body/value']",
+          "actions": {
+            "Condition_Has_Expiry": {
+              "actions": {
+                "Compose_DaysRemaining": {
+                  "runAfter": {},
+                  "type": "Compose",
+                  "inputs": "@div(sub(ticks(items('Apply_to_each')?['validityEndTime']), ticks(utcNow())), 864000000000)"
+                },
+                "Condition_Near_Expiry": {
+                  "actions": {
+                    "Compose_Severity": {
+                      "runAfter": {},
+                      "type": "Compose",
+                      "inputs": "@if(lessOrEquals(outputs('Compose_DaysRemaining'), 0), 'CRITICAL - EXPIRED', if(lessOrEquals(outputs('Compose_DaysRemaining'), variables('CriticalDays')), 'CRITICAL', if(lessOrEquals(outputs('Compose_DaysRemaining'), variables('UrgentDays')), 'URGENT', 'WARNING')))"
+                    },
+                    "Append_to_AlertItems": {
+                      "runAfter": {
+                        "Compose_Severity": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "AlertItems",
+                        "value": {
+                          "severity": "@{outputs('Compose_Severity')}",
+                          "secret": "@{items('Apply_to_each')?['name']}",
+                          "daysRemaining": "@{outputs('Compose_DaysRemaining')}",
+                          "validityEndTime": "@{items('Apply_to_each')?['validityEndTime']}"
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Compose_DaysRemaining": [
+                      "Succeeded"
+                    ]
+                  },
+                  "expression": {
+                    "and": [
+                      {
+                        "lessOrEquals": [
+                          "@outputs('Compose_DaysRemaining')",
+                          "@variables('WarningDays')"
+                        ]
+                      }
+                    ]
+                  },
+                  "type": "If"
+                }
+              },
+              "runAfter": {},
+              "expression": {
+                "and": [
+                  {
+                    "not": {
+                      "empty": [
+                        "@items('Apply_to_each')?['validityEndTime']"
+                      ]
+                    }
+                  },
+                  {
+                    "equals": [
+                      "@items('Apply_to_each')?['isEnabled']",
+                      "@true"
+                    ]
+                  }
+                ]
+              },
+              "type": "If"
+            }
+          },
+          "runAfter": {
+            "List_secrets": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach"
+        },
+        "Condition_Has_Alerts": {
+          "actions": {
+            "Compose_AlertMessage": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "<p><strong>Key Vault Secret Expiry Alert</strong></p><p>Vault scan found <strong>@{length(variables('AlertItems'))}</strong> secret(s) expiring within @{variables('WarningDays')} days (or already expired).</p><p><em>Thresholds: WARNING &lt;= @{variables('WarningDays')}d | URGENT &lt;= @{variables('UrgentDays')}d | CRITICAL &lt;= @{variables('CriticalDays')}d | EXPIRED &lt;= 0</em></p><pre>@{join(variables('AlertItems'), decodeUriComponent('%0A'))}</pre><p>Action: rotate/renew the listed secrets and update Databricks / SQL warehouse configs if needed. Do not paste secret values into Teams.</p>"
+            },
+            "Post_message_Teams": {
+              "runAfter": {
+                "Compose_AlertMessage": [
+                  "Succeeded"
+                ]
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_teams",
+                  "connectionName": "shared_teams",
+                  "operationId": "PostMessageToChannelV3"
+                },
+                "parameters": {
+                  "groupId": "PLACEHOLDER_TEAM_ID",
+                  "channelId": "PLACEHOLDER_CHANNEL_ID",
+                  "poster": "Flow bot",
+                  "location": "channel",
+                  "body/body/contentType": "html",
+                  "body/body/content": "@{outputs('Compose_AlertMessage')}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runAfter": {
+            "Apply_to_each": [
+              "Succeeded"
+            ]
+          },
+          "expression": {
+            "and": [
+              {
+                "greater": [
+                  "@length(variables('AlertItems'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "type": "If"
+        }
+      },
+      "outputs": {}
+    },
+    "connectionReferences": {
+      "shared_keyvault": {
+        "connectionName": "shared_keyvault",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_keyvault",
+        "tier": "NotSpecified"
+      },
+      "shared_teams": {
+        "connectionName": "shared_teams",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_teams",
+        "tier": "NotSpecified"
+      }
+    },
+    "flowFailureAlertSubscribed": false
+  }
+}

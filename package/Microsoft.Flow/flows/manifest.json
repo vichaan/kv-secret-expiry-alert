@@ -1,0 +1,21 @@
+{
+  "schema": "1.0",
+  "details": {
+    "displayName": "KV-Secret-Expiry-Alert",
+    "description": "Flow package resources for KV secret expiry alerts."
+  },
+  "resources": {
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890": {
+      "type": "Microsoft.Flow/flows",
+      "suggestedCreationType": "New",
+      "details": {
+        "displayName": "KV-Secret-Expiry-Alert"
+      },
+      "configurableBy": "User",
+      "dependsOn": [
+        "shared_keyvault",
+        "shared_teams"
+      ]
+    }
+  }
+}
